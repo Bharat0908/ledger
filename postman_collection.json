@@ -1,0 +1,84 @@
+{
+  "info": {
+    "name": "Ledger API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "item": [
+    {
+      "name": "Create Account",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"owner\": \"Alice\", \"currency\": \"USD\", \"initial_balance\": 100000}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/v1/accounts"
+        }
+      }
+    },
+    {
+      "name": "Enqueue Deposit",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "tx-1"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"account_id\": \"<UUID>\", \"type\": \"deposit\", \"amount\": 5000}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/v1/transactions"
+        }
+      }
+    },
+    {
+      "name": "Enqueue Transfer",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "tx-transfer-1"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"from_account_id\": \"<FROM_UUID>\", \"to_account_id\": \"<TO_UUID>\", \"amount\": 2500}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/v1/transfers"
+        }
+      }
+    },
+    {
+      "name": "Get Ledger",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/v1/accounts/<UUID>/ledger"
+        }
+      }
+    }
+  ]
+}
