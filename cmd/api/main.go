@@ -20,6 +20,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// main is the entry point of the API service. It initializes connections to Postgres, MongoDB, and RabbitMQ,
+// sets up repositories and handlers, configures the HTTP server, and starts listening for incoming requests.
+// The function also handles graceful shutdown on receiving SIGINT or SIGTERM signals.
 func main() {
 	ctx := context.Background()
 

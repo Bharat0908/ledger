@@ -18,6 +18,11 @@ import (
 	"github.com/Bharat0908/ledger/internal/repo"
 )
 
+// main is the entry point for the worker service. It initializes connections to PostgreSQL (via pgxpool),
+// MongoDB, and RabbitMQ using environment variables for configuration. The function sets up repositories
+// for both databases, constructs a transaction applier and a ledger writer, and starts a queue consumer
+// to process incoming messages. It listens for system interrupt or termination signals to gracefully
+// shut down the worker, allowing time for cleanup before exiting.
 func main() {
 	ctx := context.Background()
 	pg, err := pgxpool.New(ctx, os.Getenv("POSTGRES_DSN"))

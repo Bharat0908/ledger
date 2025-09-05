@@ -81,7 +81,7 @@ NOTE: Run `go mod tidy` locally to populate `go.sum` with accurate checksums bef
 ## Next Steps 
 
 * Add **Kubernetes manifests** and **Helm chart** for orchestrated environment.
-* Application can be customised to support AWS Environment.
+* Application can be customised to support **AWS Environment**.
   RabbitMQ - Amazon MQ
   MongoDB - DynamoDB/DocumentDB
   PostgresSQL - Amazon RDS/Aurora

@@ -10,8 +10,31 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// PGRepo provides methods to interact with a PostgreSQL database using a pgx connection pool.
+//
+// Methods:
+//
+//   - CreateAccount(ctx, owner, currency, initial):
+//     Creates a new account with the specified owner, currency, and initial balance.
+//     Returns the generated account UUID or an error.
+//
+//   - GetAccount(ctx, id):
+//     Retrieves the balance of the account with the given UUID.
+//     Returns the balance or an error.
+//
+//   - ApplyTransaction(ctx, accountID, typ, amount, key):
+//     Applies a deposit or withdrawal transaction to the specified account, using an idempotency key to ensure the operation is not repeated.
+//     Returns the new balance or an error.
+//
+//   - ApplyTransfer(ctx, from, to, amount, key):
+//     Transfers the specified amount from one account to another, using an idempotency key to ensure the operation is not repeated.
+//     Returns the new balances of both accounts or an error.
 type PGRepo struct{ DB *pgxpool.Pool }
 
+// CreateAccount creates a new account in the database with the specified owner, currency, and initial balance.
+// It generates a new UUID for the account, inserts the account record into the "accounts" table within a transaction,
+// and returns the generated account UUID upon success. If any error occurs during the process, it returns uuid.Nil and the error.
+// The operation is performed within the provided context for cancellation and timeout control.
 func (r *PGRepo) CreateAccount(ctx context.Context, owner, currency string, initial int64) (uuid.UUID, error) {
 	id := uuid.New()
 	tx, err := r.DB.BeginTx(ctx, pgx.TxOptions{})
@@ -29,6 +52,18 @@ func (r *PGRepo) CreateAccount(ctx context.Context, owner, currency string, init
 	return id, nil
 }
 
+// GetAccount retrieves the balance of an account with the specified UUID from the database.
+// It returns the account balance as an int64 and an error if the query fails or the account does not exist.
+//
+// Parameters:
+//
+//	ctx - The context for controlling cancellation and timeouts.
+//	id  - The UUID of the account to retrieve.
+//
+// Returns:
+//
+//	int64 - The balance of the account.
+//	error - An error if the account could not be retrieved.
 func (r *PGRepo) GetAccount(ctx context.Context, id uuid.UUID) (int64, error) {
 	var bal int64
 	if err := r.DB.QueryRow(ctx, `SELECT balance FROM accounts WHERE id=$1`, id).Scan(&bal); err != nil {
@@ -37,6 +72,23 @@ func (r *PGRepo) GetAccount(ctx context.Context, id uuid.UUID) (int64, error) {
 	return bal, nil
 }
 
+// ApplyTransaction applies a deposit or withdrawal transaction to the specified account in a transactional manner.
+// It ensures idempotency using the provided key, so duplicate requests with the same key will not result in double processing.
+// The function locks the account row for update, checks for sufficient funds on withdrawal, updates the balance,
+// and records the processed transaction. Returns the resulting balance after the transaction or an error.
+//
+// Parameters:
+//
+//	ctx       - context for cancellation and timeout control
+//	accountID - UUID of the account to apply the transaction to
+//	typ       - transaction type: "deposit" or "withdraw"
+//	amount    - amount to deposit or withdraw
+//	key       - idempotency key to ensure transaction uniqueness
+//
+// Returns:
+//
+//	balanceAfter - the account balance after the transaction
+//	err          - error if the transaction failed or was invalid
 func (r *PGRepo) ApplyTransaction(ctx context.Context, accountID uuid.UUID, typ string, amount int64, key string) (balanceAfter int64, err error) {
 	tx, err := r.DB.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
@@ -84,6 +136,12 @@ func (r *PGRepo) ApplyTransaction(ctx context.Context, accountID uuid.UUID, typ 
 	return balance, nil
 }
 
+// ApplyTransfer performs a transfer of the specified amount from one account to another within a database transaction.
+// It ensures idempotency using the provided key, so repeated calls with the same key will not result in duplicate transfers.
+// The function locks both accounts to prevent race conditions and deadlocks, and checks for sufficient funds before proceeding.
+// On success, it returns the updated balances of the source and destination accounts.
+// If the transfer has already been processed (as determined by the idempotency key), it returns the current balances without applying the transfer.
+// Returns an error if the transaction fails, the accounts cannot be locked, or there are insufficient funds.
 func (r *PGRepo) ApplyTransfer(ctx context.Context, from, to uuid.UUID, amount int64, key string) (fromAfter, toAfter int64, err error) {
 	tx, err := r.DB.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
